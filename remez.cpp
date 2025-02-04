@@ -1,3 +1,4 @@
+#include "Point.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -11,9 +12,20 @@ double f(double x){
 }
 
 
+std::vector<double> SelectInitialNode(int n, double domain[]){
+    double a = domain[0], b = domain[1];
+    std::vector<double> nodes(n+2);
+
+    for (int i=0; i<n+2; i++){
+        nodes[i] = (a+b)/2 + (b-a)/2 * std::cos((2.0*(i+1)-1)/(2.0*(n+1)+2)*M_PI);
+    }
+
+    return nodes;
+}
+
+
 std::vector<double> ChebyshevBasis(int n, double x, double w) {
-    std::vector<double> rs(n);
-    n--;
+    std::vector<double> rs(n+1);
 
     rs[0] = 1;
     if (n == 0) {
@@ -39,39 +51,32 @@ std::vector<double> ChebyshevBasis(int n, double x, double w) {
 }
 
 
-std::vector<double> SelectInitialNode(int n, double domain[]){
-    double a = domain[0], b = domain[1];
-    std::vector<double> nodes(n+1);
-
-    for (int i=1; i<=n+1; i++){
-        nodes[i-1] = (a+b)/2 + (b-a)/2 * std::cos((2.0*i-1)/(2.0*n+2)*M_PI);
-    }
-
-    return nodes;
-}
-
-
 std::vector<double> ComputeCoefficents(int n, std::vector<double> nodes, double w){
-    Eigen::MatrixXd A(n+1, n+1);
-    Eigen::VectorXd b(n+1);
+    Eigen::MatrixXd A(n+2, n+2);
+    Eigen::VectorXd b(n+2);
 
-    for (int i=0; i<n+1; i++){
+    for (int i=0; i<n+2; i++){
         std::vector<double> basis = ChebyshevBasis(n, nodes[i], w);
-        for (int k=0; k<n; k++){
+        for (int k=0; k<n+1; k++){
             A(i, k) = basis[k];
         }
-        A(i, n) = ((i+1)%2 == 0) ? 1 : -1;
+        A(i, n+1) = ((i+1)%2 == 0) ? 1 : -1;
         b(i) = f(nodes[i]);
     }
 
     Eigen::VectorXd x = A.colPivHouseholderQr().solve(b);
 
-    std::vector<double> coeffs(n+1);
-    for (int i = 0; i < n+1; i++) {
+    std::vector<double> coeffs(n+2);
+    for (int i = 0; i < n+2; i++) {
         coeffs[i] = x(i);
     }
 
     return coeffs;
+}
+
+
+std::vector<double> CollectExtremePoints(int n, std::vector<double> coeffs){
+
 }
 
                                                                                                                                                                   
@@ -95,7 +100,7 @@ int main() {
     std::vector<double> rs = ChebyshevBasis(n, cx, w);
     std::cout << "<<------Chebyshev polynomials------>>" << std::endl;
     std::cout << "Chebyshev polynomials at x = " << cx << std::endl;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n+1; i++) {
         std::cout << "rs" << i << " = " << rs[i] << std::endl;
     }
     std::cout << std::endl;
@@ -103,7 +108,7 @@ int main() {
     //SelectInitialNode test
     std::vector<double> nodes = SelectInitialNode(n, domain);
     std::cout << "<<------SelectInitialNode------>>" << std::endl;
-    for (int i = 0; i <= n; i++) {
+    for (int i = 0; i < n+2; i++) {
         std::cout << "node" << i << " = " << nodes[i] << std::endl;
     }
     std::cout << std::endl;
@@ -111,9 +116,10 @@ int main() {
     //ComputeCoefficents test
     std::vector<double> coeffs = ComputeCoefficents(n, nodes, w);
     std::cout << "<<------ComputeCoefficents------>>" << std::endl;
-    for (int i = 0; i <= n; i++) {
+    for (int i = 0; i < n+1; i++) {
         std::cout << "coeff" << i << " = " << coeffs[i] << std::endl;
     }
+    std::cout << "error" << " = " << coeffs[n+1] << std::endl;
 
     //Algorithm2: Improved Multi-Interval Remes Algorithm test
     ImprovedRemez(n, domain, gamma, iter, w);
